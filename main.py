@@ -19,13 +19,14 @@ from linebot.v3.webhooks import (
 )
 
 import os
+from argparse import ArgumentParser
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.environ('CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.environ('CHANNEL_SECRET'))
+configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))
+handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
-@app.route("/callback", methods=['POST'])
+@app.route("/webhook", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
@@ -56,4 +57,11 @@ def handle_message(event):
         )
 
 if __name__ == "__main__":
-    app.run()
+    arg_parser = ArgumentParser(
+        usage='Usage: python ' + __file__ + ' [--port <port>] [--help]'
+    )
+    arg_parser.add_argument('-p', '--port', default=3000, help='port')
+    arg_parser.add_argument('-d', '--debug', default=False, help='debug')
+    options = arg_parser.parse_args()
+
+    app.run(debug=options.debug, port=options.port)
