@@ -20,11 +20,13 @@ from linebot.v3.webhooks import (
 
 import os
 from argparse import ArgumentParser
+from chatgpt import augment_prompt, get_answers
+from event_keeper import log_event
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token=os.getenv('CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+configuration = Configuration(access_token=os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
+handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 @app.route("/webhook", methods=['POST'])
 def callback():
@@ -49,10 +51,26 @@ def callback():
 def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
+
+        # log event
+        log_event(event.to_dict())
+        
+        # intent classification
+        intent_prompt = augment_prompt("customer_admin", event.message.text)
+        intent_class = get_answers(intent_prompt)
+
+        # mimic chatgpt
+        prompts = augment_prompt("database_admin", event.message.text)
+        reply = get_answers(prompts)
+
         line_bot_api.reply_message_with_http_info(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=event.message.text)]
+                messages=[
+                    TextMessage(text="test ChatGPT"),  
+                    TextMessage(text=intent_class),
+                    TextMessage(text=reply)
+                ]
             )
         )
 
