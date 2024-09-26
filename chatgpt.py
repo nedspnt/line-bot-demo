@@ -1,11 +1,20 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from langchain_openai import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
 
 # load environment varaibles from .env file
 load_dotenv()
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY_LINE"))
+
+# conversation memory
+memory = ConversationBufferMemory()
+llm = ChatOpenAI(temperature=0, openai_api_key=os.getenv('OPENAI_API_KEY_LINE'))
+conversation = ConversationChain(llm=llm, memory=memory)
 
 contexts = dict()
 
@@ -85,4 +94,7 @@ def get_answers(augmented_prompts):
     answers = completion.choices[0].message.content
 
     return answers 
-    
+
+def reply_conversation(input_message):
+    reply = conversation.run(input_message)
+    return reply
