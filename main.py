@@ -20,7 +20,7 @@ from linebot.v3.webhooks import (
 
 import os
 from argparse import ArgumentParser
-from chatgpt import augment_prompt, get_answers, reply_conversation
+from chatgpt import reply_conversation
 from event_keeper import log_event
 
 app = Flask(__name__)
