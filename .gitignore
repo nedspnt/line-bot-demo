@@ -1,6 +1,7 @@
 # Custom
 backup/
-logs/event_logs.json
+logs/event_logs.jsonl
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

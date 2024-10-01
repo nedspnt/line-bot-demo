@@ -11,6 +11,11 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.schema import HumanMessage, AIMessage
+from langchain_core.chat_history import (
+    BaseChatMessageHistory,
+    InMemoryChatMessageHistory,
+)
+from langchain_core.runnables.history import RunnableWithMessageHistory
 
 # load environment varaibles from .env file
 load_dotenv()
@@ -33,10 +38,41 @@ memory = ConversationBufferMemory(memory_key="001", return_messages=True)
 # init LLM
 llm = ChatOpenAI(temperature=0, openai_api_key=os.getenv('OPENAI_API_KEY_LINE'))
 
-# retriever
-retriever = vectorstore.as_retriever()
+# session history
+store = {}
 
-def reply_conversation(input_message):
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in store:
+        store[session_id] = InMemoryChatMessageHistory()
+    return store[session_id]
+
+def reply_conversation_with_session_id(input_message, session_id, model=llm):
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a supportive and loving man named Jason. You are dating with her and get to know her, not assist her in any way.",
+            ),
+            MessagesPlaceholder(variable_name="messages"),
+        ]
+    )
+
+    chain = prompt | model
+
+    with_message_history = RunnableWithMessageHistory(chain, get_session_history, input_messages_key="messages")
+
+    response = with_message_history.invoke(
+        {"messages": [HumanMessage(content=input_message)], "language": "English"},
+        config={"configurable": {"session_id": session_id}},
+    )
+
+    return response.content
+
+def reply_conversation_with_context(input_message, llm=llm, memory=memory, context_vectorstore=vectorstore):
+
+    context_retriever = context_vectorstore.as_retriever()
+
     prompt_search_query = ChatPromptTemplate.from_messages(
         [
             MessagesPlaceholder(variable_name="chat_history"),
@@ -53,7 +89,7 @@ def reply_conversation(input_message):
     )
     
     history_aware_retriever = create_history_aware_retriever(
-        llm, retriever, prompt_search_query
+        llm, context_retriever, prompt_search_query
     )
 
     question_answer_chain = create_stuff_documents_chain(llm, prompt_get_answer)
@@ -72,8 +108,7 @@ def reply_conversation(input_message):
         "input": input_message
     })
 
-    memory.chat_memory.add_user_message(input_message)
-
-    print(chat_history)
+    memory.save_context({"input": input_message}, {"response": reply["answer"]})
 
     return reply["answer"]
+ 

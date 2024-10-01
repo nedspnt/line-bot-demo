@@ -1,6 +1,6 @@
 import json
 
-file_path = "event_logs.json"
+file_path = "logs/event_logs.jsonl"
 
 def log_event(event):
     with open(file_path, 'a') as file:
